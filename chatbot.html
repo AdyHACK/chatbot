@@ -1,0 +1,940 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FloatChat - ARGO Ocean Data Discovery</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/plotly.js/2.26.0/plotly.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css" />
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #0f4c75, #3282b8, #bbe1fa);
+            min-height: 100vh;
+            color: #333;
+        }
+
+        .header {
+            background: rgba(15, 76, 117, 0.95);
+            color: white;
+            padding: 1.5rem;
+            text-align: center;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 0.5rem;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .header p {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+
+        .container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            grid-template-rows: 1fr 400px;
+            gap: 1.5rem;
+            padding: 1.5rem;
+            height: calc(100vh - 140px);
+            max-width: 1800px;
+            margin: 0 auto;
+        }
+
+        .chat-section {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 15px;
+            padding: 1.5rem;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+            backdrop-filter: blur(10px);
+            display: flex;
+            flex-direction: column;
+            border: 1px solid rgba(255,255,255,0.2);
+        }
+
+        .visualization-section {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 15px;
+            padding: 1.5rem;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255,255,255,0.2);
+        }
+
+        .map-container {
+            grid-column: 1 / -1;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 15px;
+            padding: 1.5rem;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255,255,255,0.2);
+        }
+
+        .chat-messages {
+            flex: 1;
+            overflow-y: auto;
+            border: 2px solid #e0e8f0;
+            border-radius: 12px;
+            padding: 1rem;
+            margin-bottom: 1rem;
+            background: #f8fafc;
+            max-height: 400px;
+        }
+
+        .message {
+            margin-bottom: 1rem;
+            padding: 0.75rem 1rem;
+            border-radius: 12px;
+            max-width: 80%;
+            animation: slideIn 0.3s ease-out;
+        }
+
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .user-message {
+            background: linear-gradient(135deg, #3282b8, #0f4c75);
+            color: white;
+            margin-left: auto;
+            text-align: right;
+        }
+
+        .bot-message {
+            background: linear-gradient(135deg, #e8f4f8, #d1ecf1);
+            color: #2c3e50;
+            border-left: 4px solid #3282b8;
+        }
+
+        .chat-input-container {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .chat-input {
+            flex: 1;
+            padding: 0.75rem 1rem;
+            border: 2px solid #e0e8f0;
+            border-radius: 25px;
+            font-size: 1rem;
+            outline: none;
+            transition: all 0.3s ease;
+        }
+
+        .chat-input:focus {
+            border-color: #3282b8;
+            box-shadow: 0 0 0 3px rgba(50, 130, 184, 0.1);
+        }
+
+        .send-button {
+            padding: 0.75rem 1.5rem;
+            background: linear-gradient(135deg, #3282b8, #0f4c75);
+            color: white;
+            border: none;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 1rem;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            min-width: 100px;
+        }
+
+        .send-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(50, 130, 184, 0.3);
+        }
+
+        .send-button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .quick-queries {
+            margin-bottom: 1rem;
+        }
+
+        .quick-queries h3 {
+            color: #2c3e50;
+            margin-bottom: 0.5rem;
+            font-size: 1.1rem;
+        }
+
+        .query-button {
+            display: inline-block;
+            margin: 0.25rem;
+            padding: 0.5rem 0.75rem;
+            background: linear-gradient(135deg, #bbe1fa, #a8d8ea);
+            border: none;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: all 0.3s ease;
+            color: #2c3e50;
+        }
+
+        .query-button:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 3px 10px rgba(50, 130, 184, 0.2);
+            background: linear-gradient(135deg, #a8d8ea, #92c5de);
+        }
+
+        #map {
+            height: 100%;
+            border-radius: 10px;
+            overflow: hidden;
+        }
+
+        .visualization-tabs {
+            display: flex;
+            margin-bottom: 1rem;
+            background: #f1f5f9;
+            border-radius: 10px;
+            padding: 0.25rem;
+        }
+
+        .tab-button {
+            flex: 1;
+            padding: 0.5rem;
+            border: none;
+            background: transparent;
+            cursor: pointer;
+            border-radius: 8px;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            color: #64748b;
+        }
+
+        .tab-button.active {
+            background: linear-gradient(135deg, #3282b8, #0f4c75);
+            color: white;
+            box-shadow: 0 2px 8px rgba(50, 130, 184, 0.3);
+        }
+
+        .tab-content {
+            height: calc(100% - 60px);
+        }
+
+        .loading {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border: 2px solid #f3f3f3;
+            border-top: 2px solid #3282b8;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-right: 8px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .data-summary {
+            background: #f8fafc;
+            padding: 1rem;
+            border-radius: 8px;
+            margin: 0.5rem 0;
+            border-left: 4px solid #3282b8;
+        }
+
+        .metric {
+            display: inline-block;
+            margin: 0.25rem 0.5rem;
+            padding: 0.25rem 0.5rem;
+            background: rgba(50, 130, 184, 0.1);
+            border-radius: 15px;
+            font-size: 0.9rem;
+            color: #2c3e50;
+        }
+
+        @media (max-width: 1200px) {
+            .container {
+                grid-template-columns: 1fr;
+                grid-template-rows: auto auto 400px;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .header h1 {
+                font-size: 1.8rem;
+            }
+            .container {
+                padding: 1rem;
+                gap: 1rem;
+            }
+            .message {
+                max-width: 95%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🌊 FloatChat</h1>
+        <p>AI-Powered ARGO Ocean Data Discovery & Visualization</p>
+    </div>
+
+    <div class="container">
+        <div class="chat-section">
+            <div class="quick-queries">
+                <h3>💡 Quick Queries</h3>
+                <button class="query-button" onclick="sendQuery('Show me temperature profiles in the Arabian Sea')">🌡️ Arabian Sea Temperature</button>
+                <button class="query-button" onclick="sendQuery('Find ARGO floats near the equator')">🎯 Equatorial Floats</button>
+                <button class="query-button" onclick="sendQuery('Compare salinity data from last 6 months')">🧂 Salinity Analysis</button>
+                <button class="query-button" onclick="sendQuery('Show BGC parameters in Indian Ocean')">🔬 BGC Data</button>
+            </div>
+            
+            <div class="chat-messages" id="chatMessages">
+                <div class="message bot-message">
+                    <strong>FloatChat Assistant:</strong> Welcome to FloatChat! I'm your AI assistant for exploring ARGO ocean data. You can ask me about:
+                    <ul style="margin-top: 0.5rem; margin-left: 1rem;">
+                        <li>Temperature and salinity profiles</li>
+                        <li>BGC (Bio-Geo-Chemical) parameters</li>
+                        <li>Float locations and trajectories</li>
+                        <li>Temporal and spatial data analysis</li>
+                    </ul>
+                    What would you like to explore today?
+                </div>
+            </div>
+            
+            <div class="chat-input-container">
+                <input type="text" class="chat-input" id="chatInput" placeholder="Ask about ARGO data... (e.g., 'Show salinity profiles near India in 2023')" onkeypress="handleKeyPress(event)">
+                <button class="send-button" onclick="sendMessage()">Send 🚀</button>
+            </div>
+        </div>
+
+        <div class="visualization-section">
+            <div class="visualization-tabs">
+                <button class="tab-button active" onclick="switchTab('profiles')">📊 Profiles</button>
+                <button class="tab-button" onclick="switchTab('timeseries')">📈 Time Series</button>
+                <button class="tab-button" onclick="switchTab('statistics')">📋 Statistics</button>
+            </div>
+            <div class="tab-content">
+                <div id="profiles" style="height: 100%;">
+                    <div id="profilePlot" style="height: 100%;"></div>
+                </div>
+                <div id="timeseries" style="height: 100%; display: none;">
+                    <div id="timeseriesPlot" style="height: 100%;"></div>
+                </div>
+                <div id="statistics" style="height: 100%; display: none; overflow-y: auto;">
+                    <div id="statsContent"></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="map-container">
+            <h3 style="margin-bottom: 1rem; color: #2c3e50;">🗺️ ARGO Float Locations & Trajectories</h3>
+            <div id="map"></div>
+        </div>
+    </div>
+
+    <script>
+        // Simulated ARGO data
+        const argoData = {
+            floats: [
+                { id: 'WMO_5906468', lat: 15.2, lon: 68.5, temp: 28.5, salinity: 35.2, date: '2024-03-15', region: 'Arabian Sea' },
+                { id: 'WMO_2903766', lat: 8.1, lon: 77.3, temp: 29.1, salinity: 34.8, date: '2024-03-10', region: 'Indian Ocean' },
+                { id: 'WMO_5906469', lat: 0.5, lon: 80.2, temp: 30.2, salinity: 34.5, date: '2024-03-12', region: 'Equatorial Indian Ocean' },
+                { id: 'WMO_2903767', lat: -5.2, lon: 85.1, temp: 28.8, salinity: 34.9, date: '2024-03-08', region: 'Southern Indian Ocean' },
+                { id: 'WMO_5906470', lat: 12.8, lon: 75.4, temp: 27.9, salinity: 35.1, date: '2024-03-18', region: 'Western Indian Ocean' }
+            ],
+            profiles: {
+                depths: [0, 10, 20, 30, 50, 75, 100, 125, 150, 200, 250, 300, 400, 500, 600, 700, 800, 900, 1000],
+                temperature: [29.5, 29.2, 28.8, 28.5, 27.8, 26.5, 24.2, 21.8, 19.5, 16.2, 13.8, 11.5, 8.9, 6.8, 5.2, 4.1, 3.5, 3.1, 2.8],
+                salinity: [34.5, 34.6, 34.7, 34.8, 34.9, 35.0, 35.1, 35.0, 34.9, 34.7, 34.6, 34.5, 34.4, 34.3, 34.2, 34.1, 34.1, 34.0, 34.0]
+            }
+        };
+
+        let map;
+        let currentQuery = '';
+
+        // Initialize the application
+        function initializeApp() {
+            initializeMap();
+            generateInitialPlots();
+            showInitialStats();
+        }
+
+        // Initialize Leaflet map
+        function initializeMap() {
+            map = L.map('map').setView([10, 75], 4);
+            
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '© OpenStreetMap contributors'
+            }).addTo(map);
+
+            // Add ARGO float markers
+            argoData.floats.forEach(float => {
+                const marker = L.marker([float.lat, float.lon])
+                    .addTo(map)
+                    .bindPopup(`
+                        <div style="font-family: Arial, sans-serif;">
+                            <h4 style="color: #3282b8; margin: 0 0 8px 0;">🌊 ${float.id}</h4>
+                            <p style="margin: 4px 0;"><strong>Location:</strong> ${float.lat.toFixed(2)}°N, ${float.lon.toFixed(2)}°E</p>
+                            <p style="margin: 4px 0;"><strong>Temperature:</strong> ${float.temp}°C</p>
+                            <p style="margin: 4px 0;"><strong>Salinity:</strong> ${float.salinity} PSU</p>
+                            <p style="margin: 4px 0;"><strong>Date:</strong> ${float.date}</p>
+                            <p style="margin: 4px 0;"><strong>Region:</strong> ${float.region}</p>
+                        </div>
+                    `);
+                
+                marker.on('click', () => {
+                    generateProfilesForFloat(float);
+                });
+            });
+        }
+
+        // Generate initial plots
+        function generateInitialPlots() {
+            // Temperature-Salinity profile plot
+            const trace1 = {
+                x: argoData.profiles.temperature,
+                y: argoData.profiles.depths,
+                type: 'scatter',
+                mode: 'lines+markers',
+                name: 'Temperature (°C)',
+                line: { color: '#e74c3c', width: 3 },
+                marker: { size: 6 }
+            };
+
+            const trace2 = {
+                x: argoData.profiles.salinity,
+                y: argoData.profiles.depths,
+                type: 'scatter',
+                mode: 'lines+markers',
+                name: 'Salinity (PSU)',
+                line: { color: '#3498db', width: 3 },
+                marker: { size: 6 },
+                yaxis: 'y',
+                xaxis: 'x2'
+            };
+
+            const layout = {
+                title: {
+                    text: 'Ocean Temperature & Salinity Profiles',
+                    font: { size: 16, color: '#2c3e50' }
+                },
+                xaxis: {
+                    title: 'Temperature (°C)',
+                    side: 'bottom',
+                    color: '#e74c3c'
+                },
+                xaxis2: {
+                    title: 'Salinity (PSU)',
+                    side: 'top',
+                    overlaying: 'x',
+                    color: '#3498db'
+                },
+                yaxis: {
+                    title: 'Depth (m)',
+                    autorange: 'reversed',
+                    color: '#2c3e50'
+                },
+                margin: { l: 60, r: 60, t: 60, b: 60 },
+                showlegend: true,
+                legend: { x: 0.7, y: 0.9 },
+                plot_bgcolor: '#f8fafc',
+                paper_bgcolor: '#ffffff'
+            };
+
+            Plotly.newPlot('profilePlot', [trace1, trace2], layout, { responsive: true });
+
+            // Time series plot
+            generateTimeSeries();
+        }
+
+        // Generate time series data
+        function generateTimeSeries() {
+            const dates = [];
+            const temperatures = [];
+            const salinities = [];
+
+            for (let i = 0; i < 30; i++) {
+                const date = new Date();
+                date.setDate(date.getDate() - i);
+                dates.unshift(date.toISOString().split('T')[0]);
+                temperatures.unshift(28 + Math.random() * 4 - 2);
+                salinities.unshift(34.5 + Math.random() * 1 - 0.5);
+            }
+
+            const trace1 = {
+                x: dates,
+                y: temperatures,
+                type: 'scatter',
+                mode: 'lines+markers',
+                name: 'Sea Surface Temperature',
+                line: { color: '#e74c3c', width: 2 },
+                marker: { size: 4 }
+            };
+
+            const trace2 = {
+                x: dates,
+                y: salinities,
+                type: 'scatter',
+                mode: 'lines+markers',
+                name: 'Sea Surface Salinity',
+                line: { color: '#3498db', width: 2 },
+                marker: { size: 4 },
+                yaxis: 'y2'
+            };
+
+            const layout = {
+                title: {
+                    text: 'Sea Surface Temperature & Salinity Time Series',
+                    font: { size: 16, color: '#2c3e50' }
+                },
+                xaxis: { title: 'Date' },
+                yaxis: {
+                    title: 'Temperature (°C)',
+                    titlefont: { color: '#e74c3c' },
+                    tickfont: { color: '#e74c3c' }
+                },
+                yaxis2: {
+                    title: 'Salinity (PSU)',
+                    titlefont: { color: '#3498db' },
+                    tickfont: { color: '#3498db' },
+                    overlaying: 'y',
+                    side: 'right'
+                },
+                margin: { l: 60, r: 60, t: 60, b: 60 },
+                plot_bgcolor: '#f8fafc',
+                paper_bgcolor: '#ffffff'
+            };
+
+            Plotly.newPlot('timeseriesPlot', [trace1, trace2], layout, { responsive: true });
+        }
+
+        // Show initial statistics
+        function showInitialStats() {
+            const statsHtml = `
+                <div class="data-summary">
+                    <h3 style="color: #2c3e50; margin-bottom: 1rem;">📊 ARGO Data Summary</h3>
+                    <div style="margin-bottom: 1rem;">
+                        <span class="metric">Active Floats: ${argoData.floats.length}</span>
+                        <span class="metric">Avg Temperature: ${(argoData.floats.reduce((sum, f) => sum + f.temp, 0) / argoData.floats.length).toFixed(1)}°C</span>
+                        <span class="metric">Avg Salinity: ${(argoData.floats.reduce((sum, f) => sum + f.salinity, 0) / argoData.floats.length).toFixed(1)} PSU</span>
+                    </div>
+                </div>
+                <div class="data-summary">
+                    <h4 style="color: #3282b8; margin-bottom: 0.5rem;">🌍 Regional Coverage</h4>
+                    <p><strong>Arabian Sea:</strong> 1 float (Temperature: 28.5°C, Salinity: 35.2 PSU)</p>
+                    <p><strong>Indian Ocean:</strong> 3 floats (Avg Temperature: 29.4°C, Avg Salinity: 34.7 PSU)</p>
+                    <p><strong>Southern Indian Ocean:</strong> 1 float (Temperature: 28.8°C, Salinity: 34.9 PSU)</p>
+                </div>
+                <div class="data-summary">
+                    <h4 style="color: #3282b8; margin-bottom: 0.5rem;">📈 Data Quality</h4>
+                    <p><strong>Profile Depth Range:</strong> 0 - 1000m</p>
+                    <p><strong>Measurement Frequency:</strong> 10-day cycle</p>
+                    <p><strong>Data Completeness:</strong> 98.5%</p>
+                    <p><strong>Last Update:</strong> ${new Date().toLocaleDateString()}</p>
+                </div>
+            `;
+            document.getElementById('statsContent').innerHTML = statsHtml;
+        }
+
+        // Chat functionality
+        function handleKeyPress(event) {
+            if (event.key === 'Enter') {
+                sendMessage();
+            }
+        }
+
+        function sendQuery(query) {
+            document.getElementById('chatInput').value = query;
+            sendMessage();
+        }
+
+        function sendMessage() {
+            const input = document.getElementById('chatInput');
+            const message = input.value.trim();
+            
+            if (!message) return;
+
+            // Add user message
+            addMessage(message, 'user');
+            
+            // Clear input and show loading
+            input.value = '';
+            currentQuery = message;
+            
+            // Simulate processing delay
+            setTimeout(() => {
+                processQuery(message);
+            }, 1000);
+        }
+
+        function addMessage(message, sender) {
+            const messagesContainer = document.getElementById('chatMessages');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${sender}-message`;
+            
+            if (sender === 'user') {
+                messageDiv.innerHTML = `<strong>You:</strong> ${message}`;
+            } else {
+                messageDiv.innerHTML = message;
+            }
+            
+            messagesContainer.appendChild(messageDiv);
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        }
+
+        function processQuery(query) {
+            const lowerQuery = query.toLowerCase();
+            let response = '';
+            
+            // Simulate AI processing and generate contextual responses
+            if (lowerQuery.includes('temperature') || lowerQuery.includes('temp')) {
+                response = `<strong>🌡️ FloatChat Assistant:</strong> I found temperature data from our ARGO network! The current analysis shows:<br><br>
+                <div class="data-summary">
+                <span class="metric">Avg Surface Temperature: 28.9°C</span>
+                <span class="metric">Range: 27.9°C - 30.2°C</span>
+                <span class="metric">${argoData.floats.length} active measurements</span>
+                </div>
+                I've updated the profile visualization to show the temperature distribution. The warmest readings are from equatorial regions, which is typical for this time of year.`;
+                
+                generateTemperatureAnalysis();
+            } 
+            else if (lowerQuery.includes('salinity') || lowerQuery.includes('salt')) {
+                response = `<strong>🧂 FloatChat Assistant:</strong> Here's the salinity analysis from our ARGO network:<br><br>
+                <div class="data-summary">
+                <span class="metric">Avg Salinity: 34.9 PSU</span>
+                <span class="metric">Range: 34.5 - 35.2 PSU</span>
+                <span class="metric">High salinity in Arabian Sea: 35.2 PSU</span>
+                </div>
+                The Arabian Sea shows higher salinity values due to high evaporation rates. I've highlighted these patterns in the visualization.`;
+                
+                generateSalinityAnalysis();
+            }
+            else if (lowerQuery.includes('arabian sea') || lowerQuery.includes('arabian')) {
+                response = `<strong>🌊 FloatChat Assistant:</strong> Arabian Sea data analysis:<br><br>
+                <div class="data-summary">
+                <span class="metric">Active Float: WMO_5906468</span>
+                <span class="metric">Location: 15.2°N, 68.5°E</span>
+                <span class="metric">Temperature: 28.5°C</span>
+                <span class="metric">Salinity: 35.2 PSU</span>
+                </div>
+                The Arabian Sea region shows characteristic high salinity due to intense evaporation. The temperature is moderate for this season. Click on the map marker for detailed profile data.`;
+                
+                focusOnRegion([15.2, 68.5], 'Arabian Sea');
+            }
+            else if (lowerQuery.includes('equator') || lowerQuery.includes('equatorial')) {
+                response = `<strong>🎯 FloatChat Assistant:</strong> Equatorial region analysis:<br><br>
+                <div class="data-summary">
+                <span class="metric">Nearest Float: WMO_5906469</span>
+                <span class="metric">Location: 0.5°N, 80.2°E</span>
+                <span class="metric">Temperature: 30.2°C (Highest)</span>
+                <span class="metric">Salinity: 34.5 PSU (Lowest)</span>
+                </div>
+                Equatorial waters show the highest temperatures due to direct solar heating and lower salinity from increased precipitation. This is typical of the Inter-Tropical Convergence Zone (ITCZ).`;
+                
+                focusOnRegion([0.5, 80.2], 'Equatorial');
+            }
+            else if (lowerQuery.includes('bgc') || lowerQuery.includes('bio') || lowerQuery.includes('chemical')) {
+                response = `<strong>🔬 FloatChat Assistant:</strong> Bio-Geo-Chemical (BGC) data analysis:<br><br>
+                <div class="data-summary">
+                <span class="metric">BGC-Enabled Floats: 2</span>
+                <span class="metric">Oxygen Levels: 4.2-6.8 ml/L</span>
+                <span class="metric">Chlorophyll: 0.15-0.8 mg/m³</span>
+                <span class="metric">pH: 7.9-8.1</span>
+                </div>
+                BGC sensors provide crucial data on ocean health, including dissolved oxygen, chlorophyll concentration, and pH levels. The Indian Ocean region shows typical tropical ocean biogeochemistry patterns.`;
+                
+                generateBGCAnalysis();
+            }
+            else if (lowerQuery.includes('compare') || lowerQuery.includes('comparison')) {
+                response = `<strong>📊 FloatChat Assistant:</strong> Comparative analysis across regions:<br><br>
+                <div class="data-summary">
+                <span class="metric">Arabian Sea: High salinity (35.2 PSU)</span>
+                <span class="metric">Equatorial: High temperature (30.2°C)</span>
+                <span class="metric">Southern Ocean: Balanced conditions</span>
+                </div>
+                I've generated a comparative visualization showing the differences in temperature and salinity patterns across the Indian Ocean regions. The data reveals distinct regional characteristics.`;
+                
+                generateComparativeAnalysis();
+            }
+            else {
+                response = `<strong>🤖 FloatChat Assistant:</strong> I understand you're asking about: "${query}"<br><br>
+                I can help you explore ARGO ocean data including:
+                <ul style="margin-top: 0.5rem; margin-left: 1rem;">
+                <li>🌡️ Temperature and salinity profiles</li>
+                <li>🗺️ Float locations and trajectories</li>
+                <li>🔬 BGC parameters (oxygen, chlorophyll, pH)</li>
+                <li>📈 Temporal analysis and trends</li>
+                <li>🌍 Regional comparisons</li>
+                </ul>
+                Try asking about specific regions, parameters, or time periods for more targeted analysis!`;
+            }
+            
+            addMessage(response, 'bot');
+        }
+
+        // Visualization functions
+        function generateTemperatureAnalysis() {
+            const depths = [0, 50, 100, 200, 300, 500, 1000];
+            const temp1 = [30.2, 28.5, 24.1, 16.8, 12.4, 6.9, 2.8]; // Equatorial
+            const temp2 = [28.5, 26.8, 22.5, 15.2, 11.8, 6.2, 2.9]; // Arabian Sea
+            const temp3 = [29.1, 27.9, 23.8, 16.1, 12.1, 6.5, 2.8]; // Indian Ocean
+
+            const trace1 = {
+                x: temp1, y: depths,
+                type: 'scatter', mode: 'lines+markers',
+                name: 'Equatorial (30.2°C)',
+                line: { color: '#e74c3c', width: 3 }
+            };
+
+            const trace2 = {
+                x: temp2, y: depths,
+                type: 'scatter', mode: 'lines+markers',
+                name: 'Arabian Sea (28.5°C)',
+                line: { color: '#f39c12', width: 3 }
+            };
+
+            const trace3 = {
+                x: temp3, y: depths,
+                type: 'scatter', mode: 'lines+markers',
+                name: 'Indian Ocean (29.1°C)',
+                line: { color: '#3498db', width: 3 }
+            };
+
+            const layout = {
+                title: 'Temperature Profiles by Region',
+                xaxis: { title: 'Temperature (°C)' },
+                yaxis: { title: 'Depth (m)', autorange: 'reversed' },
+                margin: { l: 60, r: 60, t: 60, b: 60 },
+                plot_bgcolor: '#f8fafc',
+                paper_bgcolor: '#ffffff'
+            };
+
+            Plotly.newPlot('profilePlot', [trace1, trace2, trace3], layout, { responsive: true });
+        }
+
+        function generateSalinityAnalysis() {
+            const depths = [0, 50, 100, 200, 300, 500, 1000];
+            const sal1 = [34.5, 34.8, 34.9, 34.7, 34.5, 34.3, 34.1]; // Equatorial
+            const sal2 = [35.2, 35.1, 35.0, 34.8, 34.6, 34.4, 34.2]; // Arabian Sea
+            const sal3 = [34.8, 34.9, 35.0, 34.8, 34.6, 34.4, 34.2]; // Indian Ocean
+
+            const trace1 = {
+                x: sal1, y: depths,
+                type: 'scatter', mode: 'lines+markers',
+                name: 'Equatorial (34.5 PSU)',
+                line: { color: '#2ecc71', width: 3 }
+            };
+
+            const trace2 = {
+                x: sal2, y: depths,
+                type: 'scatter', mode: 'lines+markers',
+                name: 'Arabian Sea (35.2 PSU)',
+                line: { color: '#e67e22', width: 3 }
+            };
+
+            const trace3 = {
+                x: sal3, y: depths,
+                type: 'scatter', mode: 'lines+markers',
+                name: 'Indian Ocean (34.8 PSU)',
+                line: { color: '#9b59b6', width: 3 }
+            };
+
+            const layout = {
+                title: 'Salinity Profiles by Region',
+                xaxis: { title: 'Salinity (PSU)' },
+                yaxis: { title: 'Depth (m)', autorange: 'reversed' },
+                margin: { l: 60, r: 60, t: 60, b: 60 },
+                plot_bgcolor: '#f8fafc',
+                paper_bgcolor: '#ffffff'
+            };
+
+            Plotly.newPlot('profilePlot', [trace1, trace2, trace3], layout, { responsive: true });
+        }
+
+        function generateBGCAnalysis() {
+            // Switch to time series tab and show BGC data
+            switchTab('timeseries');
+            
+            const dates = [];
+            const oxygen = [];
+            const chlorophyll = [];
+            const ph = [];
+
+            for (let i = 0; i < 30; i++) {
+                const date = new Date();
+                date.setDate(date.getDate() - i);
+                dates.unshift(date.toISOString().split('T')[0]);
+                oxygen.unshift(5.2 + Math.random() * 2 - 1);
+                chlorophyll.unshift(0.4 + Math.random() * 0.6 - 0.3);
+                ph.unshift(8.0 + Math.random() * 0.2 - 0.1);
+            }
+
+            const trace1 = {
+                x: dates, y: oxygen,
+                type: 'scatter', mode: 'lines+markers',
+                name: 'Dissolved O₂ (ml/L)',
+                line: { color: '#3498db', width: 2 }
+            };
+
+            const trace2 = {
+                x: dates, y: chlorophyll,
+                type: 'scatter', mode: 'lines+markers',
+                name: 'Chlorophyll (mg/m³)',
+                line: { color: '#2ecc71', width: 2 },
+                yaxis: 'y2'
+            };
+
+            const trace3 = {
+                x: dates, y: ph,
+                type: 'scatter', mode: 'lines+markers',
+                name: 'pH',
+                line: { color: '#e74c3c', width: 2 },
+                yaxis: 'y3'
+            };
+
+            const layout = {
+                title: 'BGC Parameters Time Series',
+                xaxis: { title: 'Date', domain: [0, 1] },
+                yaxis: { title: 'Dissolved O₂ (ml/L)', titlefont: { color: '#3498db' } },
+                yaxis2: { title: 'Chlorophyll (mg/m³)', titlefont: { color: '#2ecc71' }, overlaying: 'y', side: 'right', position: 0.85 },
+                yaxis3: { title: 'pH', titlefont: { color: '#e74c3c' }, overlaying: 'y', side: 'right' },
+                margin: { l: 60, r: 100, t: 60, b: 60 },
+                plot_bgcolor: '#f8fafc',
+                paper_bgcolor: '#ffffff'
+            };
+
+            Plotly.newPlot('timeseriesPlot', [trace1, trace2, trace3], layout, { responsive: true });
+        }
+
+        function generateComparativeAnalysis() {
+            const regions = ['Arabian Sea', 'Equatorial', 'Indian Ocean', 'Southern Ocean', 'Western IO'];
+            const temperature = [28.5, 30.2, 29.1, 28.8, 27.9];
+            const salinity = [35.2, 34.5, 34.8, 34.9, 35.1];
+
+            const trace1 = {
+                x: regions, y: temperature,
+                type: 'bar',
+                name: 'Temperature (°C)',
+                marker: { color: '#e74c3c' }
+            };
+
+            const trace2 = {
+                x: regions, y: salinity,
+                type: 'bar',
+                name: 'Salinity (PSU)',
+                marker: { color: '#3498db' },
+                yaxis: 'y2'
+            };
+
+            const layout = {
+                title: 'Regional Comparison: Temperature & Salinity',
+                xaxis: { title: 'Region' },
+                yaxis: { title: 'Temperature (°C)', titlefont: { color: '#e74c3c' } },
+                yaxis2: { title: 'Salinity (PSU)', titlefont: { color: '#3498db' }, overlaying: 'y', side: 'right' },
+                margin: { l: 60, r: 60, t: 60, b: 100 },
+                plot_bgcolor: '#f8fafc',
+                paper_bgcolor: '#ffffff'
+            };
+
+            Plotly.newPlot('profilePlot', [trace1, trace2], layout, { responsive: true });
+        }
+
+        function generateProfilesForFloat(float) {
+            // Generate synthetic profile data for the selected float
+            const depths = [0, 10, 20, 30, 50, 75, 100, 125, 150, 200, 250, 300, 400, 500, 600, 700, 800, 900, 1000];
+            const baseTemp = float.temp;
+            const baseSal = float.salinity;
+            
+            const temperature = depths.map(depth => {
+                if (depth === 0) return baseTemp;
+                return baseTemp - (depth * 0.025) + Math.random() * 2 - 1;
+            });
+            
+            const salinity = depths.map(depth => {
+                if (depth === 0) return baseSal;
+                return baseSal - (depth * 0.001) + Math.random() * 0.2 - 0.1;
+            });
+
+            const trace1 = {
+                x: temperature, y: depths,
+                type: 'scatter', mode: 'lines+markers',
+                name: `${float.id} Temperature`,
+                line: { color: '#e74c3c', width: 3 },
+                marker: { size: 6 }
+            };
+
+            const trace2 = {
+                x: salinity, y: depths,
+                type: 'scatter', mode: 'lines+markers',
+                name: `${float.id} Salinity`,
+                line: { color: '#3498db', width: 3 },
+                marker: { size: 6 },
+                xaxis: 'x2'
+            };
+
+            const layout = {
+                title: `Profile for Float ${float.id} - ${float.region}`,
+                xaxis: { title: 'Temperature (°C)', color: '#e74c3c' },
+                xaxis2: { title: 'Salinity (PSU)', overlaying: 'x', side: 'top', color: '#3498db' },
+                yaxis: { title: 'Depth (m)', autorange: 'reversed' },
+                margin: { l: 60, r: 60, t: 80, b: 60 },
+                showlegend: true,
+                plot_bgcolor: '#f8fafc',
+                paper_bgcolor: '#ffffff'
+            };
+
+            Plotly.newPlot('profilePlot', [trace1, trace2], layout, { responsive: true });
+            
+            // Add contextual message
+            addMessage(`<strong>🎯 FloatChat Assistant:</strong> I've loaded the detailed profile for float ${float.id} in the ${float.region}. The profile shows typical oceanic stratification with temperature decreasing with depth. Current surface conditions: ${float.temp}°C, ${float.salinity} PSU.`, 'bot');
+        }
+
+        function focusOnRegion(coordinates, regionName) {
+            map.setView(coordinates, 6);
+            
+            // Add a temporary circle to highlight the region
+            const circle = L.circle(coordinates, {
+                color: '#e74c3c',
+                fillColor: '#e74c3c',
+                fillOpacity: 0.2,
+                radius: 100000
+            }).addTo(map);
+            
+            setTimeout(() => {
+                map.removeLayer(circle);
+            }, 3000);
+        }
+
+        // Tab switching functionality
+        function switchTab(tabName) {
+            // Hide all tab contents
+            document.getElementById('profiles').style.display = 'none';
+            document.getElementById('timeseries').style.display = 'none';
+            document.getElementById('statistics').style.display = 'none';
+            
+            // Remove active class from all buttons
+            document.querySelectorAll('.tab-button').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            
+            // Show selected tab and mark button as active
+            document.getElementById(tabName).style.display = 'block';
+            event.target.classList.add('active');
+        }
+
+        // Initialize the application when page loads
+        window.addEventListener('load', initializeApp);
+    </script>
+</body>
+</html>
