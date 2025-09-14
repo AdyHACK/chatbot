@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>FloatChat - ARGO Ocean Data Discovery</title>
+    <title>AquaQuery - ARGO Ocean Data Discovery</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/plotly.js/2.26.0/plotly.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css" />
@@ -285,7 +285,7 @@
 </head>
 <body>
     <div class="header">
-        <h1>🌊 FloatChat</h1>
+        <h1>🌊 AquaQuery</h1>
         <p>AI-Powered ARGO Ocean Data Discovery & Visualization</p>
     </div>
 
@@ -301,7 +301,7 @@
             
             <div class="chat-messages" id="chatMessages">
                 <div class="message bot-message">
-                    <strong>FloatChat Assistant:</strong> Welcome to FloatChat! I'm your AI assistant for exploring ARGO ocean data. You can ask me about:
+                    <strong>AquaQuery Assistant:</strong> Welcome to AquaQuery! I'm your AI assistant for exploring ARGO ocean data. You can ask me about:
                     <ul style="margin-top: 0.5rem; margin-left: 1rem;">
                         <li>Temperature and salinity profiles</li>
                         <li>BGC (Bio-Geo-Chemical) parameters</li>
@@ -599,7 +599,7 @@
             
             // Simulate AI processing and generate contextual responses
             if (lowerQuery.includes('temperature') || lowerQuery.includes('temp')) {
-                response = `<strong>🌡️ FloatChat Assistant:</strong> I found temperature data from our ARGO network! The current analysis shows:<br><br>
+                response = `<strong>🌡️ AquaQuery Assistant:</strong> I found temperature data from our ARGO network! The current analysis shows:<br><br>
                 <div class="data-summary">
                 <span class="metric">Avg Surface Temperature: 28.9°C</span>
                 <span class="metric">Range: 27.9°C - 30.2°C</span>
@@ -610,7 +610,7 @@
                 generateTemperatureAnalysis();
             } 
             else if (lowerQuery.includes('salinity') || lowerQuery.includes('salt')) {
-                response = `<strong>🧂 FloatChat Assistant:</strong> Here's the salinity analysis from our ARGO network:<br><br>
+                response = `<strong>🧂 AquaQuery Assistant:</strong> Here's the salinity analysis from our ARGO network:<br><br>
                 <div class="data-summary">
                 <span class="metric">Avg Salinity: 34.9 PSU</span>
                 <span class="metric">Range: 34.5 - 35.2 PSU</span>
@@ -621,7 +621,7 @@
                 generateSalinityAnalysis();
             }
             else if (lowerQuery.includes('arabian sea') || lowerQuery.includes('arabian')) {
-                response = `<strong>🌊 FloatChat Assistant:</strong> Arabian Sea data analysis:<br><br>
+                response = `<strong>🌊 AquaQuery Assistant:</strong> Arabian Sea data analysis:<br><br>
                 <div class="data-summary">
                 <span class="metric">Active Float: WMO_5906468</span>
                 <span class="metric">Location: 15.2°N, 68.5°E</span>
@@ -633,7 +633,7 @@
                 focusOnRegion([15.2, 68.5], 'Arabian Sea');
             }
             else if (lowerQuery.includes('equator') || lowerQuery.includes('equatorial')) {
-                response = `<strong>🎯 FloatChat Assistant:</strong> Equatorial region analysis:<br><br>
+                response = `<strong>🎯 AquaQuery Assistant:</strong> Equatorial region analysis:<br><br>
                 <div class="data-summary">
                 <span class="metric">Nearest Float: WMO_5906469</span>
                 <span class="metric">Location: 0.5°N, 80.2°E</span>
@@ -645,7 +645,7 @@
                 focusOnRegion([0.5, 80.2], 'Equatorial');
             }
             else if (lowerQuery.includes('bgc') || lowerQuery.includes('bio') || lowerQuery.includes('chemical')) {
-                response = `<strong>🔬 FloatChat Assistant:</strong> Bio-Geo-Chemical (BGC) data analysis:<br><br>
+                response = `<strong>🔬 AquaQuery Assistant:</strong> Bio-Geo-Chemical (BGC) data analysis:<br><br>
                 <div class="data-summary">
                 <span class="metric">BGC-Enabled Floats: 2</span>
                 <span class="metric">Oxygen Levels: 4.2-6.8 ml/L</span>
@@ -657,7 +657,7 @@
                 generateBGCAnalysis();
             }
             else if (lowerQuery.includes('compare') || lowerQuery.includes('comparison')) {
-                response = `<strong>📊 FloatChat Assistant:</strong> Comparative analysis across regions:<br><br>
+                response = `<strong>📊 AquaQuery Assistant:</strong> Comparative analysis across regions:<br><br>
                 <div class="data-summary">
                 <span class="metric">Arabian Sea: High salinity (35.2 PSU)</span>
                 <span class="metric">Equatorial: High temperature (30.2°C)</span>
@@ -668,7 +668,7 @@
                 generateComparativeAnalysis();
             }
             else {
-                response = `<strong>🤖 FloatChat Assistant:</strong> I understand you're asking about: "${query}"<br><br>
+                response = `<strong>🤖 AquaQuery Assistant:</strong> I understand you're asking about: "${query}"<br><br>
                 I can help you explore ARGO ocean data including:
                 <ul style="margin-top: 0.5rem; margin-left: 1rem;">
                 <li>🌡️ Temperature and salinity profiles</li>
@@ -897,7 +897,7 @@
             Plotly.newPlot('profilePlot', [trace1, trace2], layout, { responsive: true });
             
             // Add contextual message
-            addMessage(`<strong>🎯 FloatChat Assistant:</strong> I've loaded the detailed profile for float ${float.id} in the ${float.region}. The profile shows typical oceanic stratification with temperature decreasing with depth. Current surface conditions: ${float.temp}°C, ${float.salinity} PSU.`, 'bot');
+            addMessage(`<strong>🎯 AquaQuery Assistant:</strong> I've loaded the detailed profile for float ${float.id} in the ${float.region}. The profile shows typical oceanic stratification with temperature decreasing with depth. Current surface conditions: ${float.temp}°C, ${float.salinity} PSU.`, 'bot');
         }
 
         function focusOnRegion(coordinates, regionName) {
@@ -937,5 +937,4 @@
         window.addEventListener('load', initializeApp);
     </script>
 </body>
-
 </html>
